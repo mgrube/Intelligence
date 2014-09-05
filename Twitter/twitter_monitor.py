@@ -9,25 +9,21 @@ mongoclient = MongoClient('localhost', 27017)
 
 twitter = Twython('nope', 'nope', 'nope', 'nope')
 
-collection = mongoclient
+db = mongoclient['tweets']
+posts = db.posts
 
-def updateResults(datafile):
-	allresults = pickle.load(open(datafile, 'wb'))
-	for s in allresults.keys():
-		results = twitter.search(q=s.strip(), count=200)
-		print 'Fetching tweets for search term: ' + s
-		for r in results['statuses']:
-			allresults[s][r['id']] = r
-	pickle.dump(allresults, open(datafile, 'wb'))
+#Basically the approach here is to insert every tweet into mongo and ignore duplicates.
 
-
-def generateResults(searchtermsfile):
-	resultsdict = dict()
+def fetchTweets(searchtermsfile):
 	searchterms = open(searchtermsfile, 'rb')
 	for s in searchterms:
-		resultsdict[s.strip()] = dict()
 		results = twitter.search(q=s.strip(), count=200)
+		print len(results['statuses'])
 		print 'Fetching tweets for search term: ' + s
 		for r in results['statuses']:
-			resultsdict[s.strip()][r['id']] = r
-	return resultsdict
+			print 'Inserting tweet ' + str(r['id'])
+			doc = [{"_id": str(r['id']) + '_' +  s.strip(),  "tweet_data" : r }]
+			posts.insert(doc)
+
+fetchTweets('searchterms.txt')
+
